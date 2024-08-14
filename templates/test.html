@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body { background: #1e1e2f; color: #fff; }
+        .btn-custom { background-color: #4a4a76; color: #fff; }
+        .btn-custom:hover { background-color: #3a3a65; }
+        .table-dark { background-color: #2e2e3e; }
+        .disabled-input { background-color: #444; }
+        .highlight-winner { background-color: #d4edda !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Game</h1>
+        <div class="form-group">
+            <label for="name">Имя игрока:</label>
+            <input type="text" id="name" class="form-control">
+            <button class="btn btn-primary btn-custom mt-2" onclick="addPlayer()">Добавить игрока</button>
+        </div>
+        <table class="table table-dark">
+            <thead>
+                <tr>
+                    <th>Очки</th>
+                    <th>Имя</th>
+                    <th>Текущие очки</th>
+                    <th>Попытки</th>
+                    <th>История очков</th>
+                    <th>Действие</th>
+                </tr>
+            </thead>
+            <tbody id="player-list"></tbody>
+        </table>
+        <button class="btn btn-warning btn-custom mt-2" onclick="resetGame()">Сбросить результаты</button>
+        <div id="winner-message" class="alert alert-success mt-2" style="display: none;"></div>
+    </div>
+
+    <script>
+        let currentInputIndex = 0;
+
+        async function addPlayer() {
+            const name = document.getElementById('name').value;
+            const response = await fetch('/players/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const player = await response.json();
+            const playerList = document.getElementById('player-list');
+            const newRow = `<tr id="player-${player.id}">
+                                <td>
+                                    <input type="number" id="input-points-${player.id}" class="form-control"
+                                           onkeypress="handleKeyPress(event, ${player.id})">
+                                </td>
+                                <td id="name-${player.id}">${player.name}</td>
+                                <td id="points-${player.id}">${player.points}</td>
+                                <td id="attempts-${player.id}">${player.attempts}</td>
+                                <td id="history-${player.id}"></td>
+                                <td><button class="btn btn-danger btn-custom" onclick="deletePlayer(${player.id})">Удалить</button></td>
+                            </tr>`;
+            playerList.innerHTML += newRow;
+            document.getElementById('name').value = '';
+            updateInputState();
+        }
+
+        function handleKeyPress(event, playerId) {
+            if (event.key === 'Enter') {
+                addPoints(playerId);
+            }
+        }
+
+        async function addPoints(playerId) {
+            const points = document.getElementById(`input-points-${playerId}`).value;
+            const response = await fetch(`/players/${playerId}/points?points=${points}`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+            const pointsCell = document.getElementById(`points-${playerId}`);
+            const attemptsCell = document.getElementById(`attempts-${playerId}`);
+            const historyCell = document.getElementById(`history-${playerId}`);
+            if (result.message) {
+                const winnerMessage = document.getElementById('winner-message');
+                winnerMessage.innerText = result.message;
+                winnerMessage.style.display = 'block';
+                winnerMessage.classList.add('show');
+            }
+            if (result.player) {
+                pointsCell.innerText = result.player.points;
+                attemptsCell.innerText = result.player.attempts;
+                historyCell.innerText = result.player.points_per_attempt.join(', ');
+                if (result.player.points <= 0) {
+                    pointsCell.style.color = 'green'; // Highlight winner points
+                    pointsCell.parentElement.classList.add('highlight-winner'); // Highlight winner row
+                }
+                document.getElementById(`input-points-${playerId}`).value = ''; // Clear input
+                updateInputState();
+            }
+        }
+
+        function updateInputState() {
+            const inputs = Array.from(document.querySelectorAll('[id^="input-points-"]'));
+            inputs.forEach((input, index) => {
+                if (index === currentInputIndex) {
+                    input.classList.remove('disabled-input');
+                    input.focus();
+                } else {
+                    input.classList.add('disabled-input');
+                }
+            });
+            currentInputIndex = (currentInputIndex + 1) % inputs.length;
+        }
+
+        async function resetGame() {
+            const response = await fetch('/reset/', {
+                method: 'POST'
+            });
+            const result = await response.json();
+            if (result.message) {
+                document.getElementById('winner-message').style.display = 'none';
+                const playerList = document.getElementById('player-list');
+                const rows = playerList.getElementsByTagName('tr');
+                for (let row of rows) {
+                    const pointsCell = row.getElementsByTagName('td')[2];
+                    const attemptsCell = row.getElementsByTagName('td')[3];
+                    const historyCell = row.getElementsByTagName('td')[4];
+                    pointsCell.innerText = 501;
+                    attemptsCell.innerText = 0;
+                    historyCell.innerHTML = ''; // Reset points history
+                    row.classList.remove('highlight-winner'); // Reset background color
+                    pointsCell.style.color = ''; // Reset points color
+                }
+                currentInputIndex = 0;
+                updateInputState();
+            }
+        }
+
+        async function deletePlayer(playerId) {
+            const response = await fetch(`/players/${playerId}`, {
+                method: 'DELETE'
+            });
+            const result = await response.json();
+            if (result.message) {
+                document.getElementById(`player-${playerId}`).remove();
+                currentInputIndex = 0;
+                updateInputState();
+            }
+        }
+    </script>
+</body>
+</html>
