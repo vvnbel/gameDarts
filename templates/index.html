@@ -5,10 +5,23 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/static/styles.css">
     <style>
+        form input:focus,
+        form button:focus {
+            opacity: 1 !important;  /* Убираем прозрачность */
+        }
+
+        form input,
+        form button {
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
         body {
             background: linear-gradient(135deg, #0d1b2a, #1e2a38);
             color: #ffffff;
             font-family: 'Orbitron', sans-serif;
+        }
+        body > *:not(table) {
+            opacity: 0.5;
         }
         h1, h2 {
             color: #e0f7fa;
@@ -16,6 +29,7 @@
         .table {
             background: #dee2e6;
             border-radius: 10px;
+            opacity: 1
         }
         .table th, .table td {
             border: 0px solid rgba(255, 255, 255, 0.2);
@@ -96,6 +110,7 @@
             color: #e0f7fa;
             text-align: center;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            opacity: 1;
         }
         #winner-popup h3 {
             margin-bottom: 20px;
@@ -105,6 +120,18 @@
             display: block;
             width: 100%;
         }
+        #name {
+            width: 300px;
+        }
+
+        .btn-max {
+            width: 150px;
+        }
+
+        /* Adjust max points input size */
+        #max-points {
+            width: 150px;
+        }
 
 
     </style>
@@ -112,11 +139,17 @@
 <body class="container">
     <h1 class="mt-5"><></h1>
     <form id="player-form" class="form-inline mb-3">
-        <input type="text" id="name" class="form-control mr-2" placeholder="Имя игрока">
-        <button type="button" class="btn btn-custom" onclick="addPlayer()">Добавить игрока</button>
+        <input type="text" id="name" class="form-control mr-2" placeholder="Имя игрока" onkeypress="handleKeyPress(event, 'name')">
+        <button type="button" class="btn btn-custom" onclick="addPlayer()">ADD PLAYER</button>
     </form>
 
-    <button type="button" class="btn btn-custom" onclick="resetGame()" style="margin: 10px 0px 20px 0px;">Начать игру !</button>
+    <div class="form-inline mb-3">
+        <input type="number" id="max-points" class="form-control mr-2" placeholder="Максимум очков" style="width: 130px" onkeypress="handleKeyPress(event, 'max-points')">
+        <button type="button" class="btn btn-custom btn-max" onclick="setMaxPoints()" style="width: 130px;">MAX</button>
+    </div>
+
+
+    <button type="button" class="btn btn-custom" onclick="resetGame()" style="margin: 10px 0px 20px 0px;">GO!</button>
     <h2></h2>
     <table class="table table-striped">
         <thead>
@@ -144,7 +177,7 @@
                             <span>{{ points }}</span>{% if not loop.last %}, {% endif %}
                         {% endfor %}
                     </td>
-                    <td><button class="btn btn-danger btn-custom" onclick="deletePlayer({{ player.id }})">Удалить</button></td>
+                    <td><button class="btn btn-danger btn-custom" onclick="deletePlayer({{ player.id }})">X</button></td>
                 </tr>
             {% endfor %}
         </tbody>
@@ -160,14 +193,25 @@
 
     <script>
         let currentInputIndex = 0;
+        let isAddingPlayer = false;
 
         async function addPlayer() {
-            const name = document.getElementById('name').value;
+            if (isAddingPlayer) return;  // Предотвращение двойного вызова
+            isAddingPlayer = true;
+
+            const name = document.getElementById('name').value.trim();
+            if (!name) {
+                alert("Введите имя игрока!");
+                isAddingPlayer = false;
+                return;
+            }
+
             const response = await fetch('/players/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
             });
+
             const player = await response.json();
             const playerList = document.getElementById('player-list');
             const newRow = `<tr id="player-${player.id}">
@@ -182,14 +226,22 @@
                                 <td><button class="btn btn-danger btn-custom" onclick="deletePlayer(${player.id})">Удалить</button></td>
                             </tr>`;
             playerList.innerHTML += newRow;
+
             document.getElementById('name').value = '';
-            updateInputState();
+            isAddingPlayer = false;
         }
 
-        function handleKeyPress(event, playerId) {
+        function handleKeyPress(event, fieldId) {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                addPoints(playerId);
+                if (fieldId === 'name') {
+                    addPlayer();
+
+                } else if (fieldId === 'max-points') {
+                    setMaxPoints();
+                } else {
+                    addPoints(fieldId);
+                }
             }
         }
 
@@ -197,12 +249,16 @@
             const inputField = document.getElementById(`input-points-${playerId}`);
             const inputValues = inputField.value.split(',').map(Number).filter(n => !isNaN(n));
             const points = inputValues[inputValues.length - 1];
+
             const response = await fetch(`/players/${playerId}/points?points=${points}`, {
                 method: 'POST'
             });
+
             const result = await response.json();
             const pointsCell = document.getElementById(`points-${playerId}`);
             const attemptsCell = document.getElementById(`attempts-${playerId}`);
+
+            // Проверяем, если пришло сообщение (например, об окончании игры)
             if (result.message) {
                 const winnerMessage = document.getElementById('winner-message');
                 winnerMessage.innerText = result.message;
@@ -210,15 +266,28 @@
                 winnerMessage.classList.add('show');
                 showWinnerMessage(result.message);
             }
+
             if (result.player) {
-                pointsCell.innerText = result.player.points;
-                attemptsCell.innerText = result.player.attempts;
-                inputField.value += ', '; // Добавляем запятую и пробел для следующего ввода
-                if (result.player.points <= 0) {
-                    pointsCell.style.color = 'green'; // Highlight winner points
-                    pointsCell.parentElement.classList.add('highlight-winner'); // Highlight winner row
-                    showWinnerPopup(result.player.name);
+                // Если введено больше очков, чем нужно, ход игнорируется
+                if (result.player.points < 0) {
+                    alert('Ход не засчитан: игрок ввел больше очков, чем нужно.');
+                    // Обнуляем результат текущего ввода
+                    inputField.value = '';
+                } else {
+                    // Обновляем отображение очков и попыток, если ход корректен
+                    pointsCell.innerText = result.player.points;
+                    attemptsCell.innerText = result.player.attempts;
+                    inputField.value += ', '; // Добавляем запятую и пробел для следующего ввода
+
+                    // Если игрок выиграл (набрал 0 очков)
+                    if (result.player.points <= 0) {
+                        pointsCell.style.color = 'green'; // Подсветить очки победителя
+                        pointsCell.parentElement.classList.add('highlight-winner'); // Подсветить строку победителя
+                        showWinnerPopup(result.player.name);
+                    }
                 }
+
+                // Передаем ход следующему игроку в любом случае
                 updateInputState();
             }
         }
@@ -259,8 +328,11 @@
         }
 
         async function resetGame() {
+            const maxPoints = document.getElementById('max-points').value || 501;
             const response = await fetch('/reset/', {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ max_points: maxPoints })
             });
             const result = await response.json();
             if (result.message) {
@@ -272,7 +344,8 @@
                     const attemptsCell = row.getElementsByTagName('td')[3];
                     const historyCell = row.getElementsByTagName('td')[4];
                     const inputField = row.getElementsByTagName('td')[0].getElementsByTagName('input')[0];
-                    pointsCell.innerText = 501;
+                    pointsCell.innerText = maxPoints;
+                    pointsCell.innerText = '';
                     attemptsCell.innerText = 0;
                     inputField.value = ''; // Reset points history in input field
                     row.classList.remove('highlight-winner'); // Reset background color
@@ -292,6 +365,25 @@
                 playerRow.remove();
             }
         }
+
+        async function setMaxPoints() {
+            const maxPoints = document.getElementById('max-points').value || 501;
+            alert(`Максимальные очки установлены: ${maxPoints}`);
+            const response = await fetch('/players/', { method: 'GET' });
+            const players = await response.json();
+            players.forEach(player => {
+                const pointsCell = document.getElementById(`points-${player.id}`);
+                pointsCell.innerText = maxPoints; // Update the points column to reflect new max points
+                pointsCell.style.color = ''; // Reset the color just in case
+        });
+        }
+
+        document.getElementById('name').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Остановить стандартное поведение (передача фокуса)
+                addPlayer(); // Вызвать функцию добавления игрока
+            }
+        });
     </script>
 </body>
 </html>

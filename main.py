@@ -27,3 +27,4 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def health_check():
     return {"status": "ok"}
 
+

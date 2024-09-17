@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from schemas import MaxPoints
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi import Request
@@ -25,8 +26,8 @@ def read_root(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("index.html", {"request": request, "players": players})
 
 @router.post("/players/", response_model=schemas.Player)
-def create_player(player: schemas.PlayerCreate, db: Session = Depends(get_db)):
-    db_player = crud.create_player(db, player)
+def create_player(player: schemas.PlayerCreate, db: Session = Depends(get_db), max_points: int = 501):
+    db_player = crud.create_player(db, player, max_points)
     return db_player
 
 @router.get("/players/", response_model=list[schemas.Player])
@@ -43,10 +44,6 @@ def add_points(player_id: int, points: int, db: Session = Depends(get_db)):
         return {"message": "Очки обновлены", "player": player}
     raise HTTPException(status_code=404, detail="Player not found")
 
-@router.post("/reset/")
-def reset_game(db: Session = Depends(get_db)):
-    crud.reset_players(db)
-    return {"message": "Результаты сброшены"}
 
 @router.delete("/players/{player_id}/", response_model=schemas.Player)
 def delete_player(player_id: int, db: Session = Depends(get_db)):
@@ -55,4 +52,13 @@ def delete_player(player_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Player not found")
     crud.delete_player(db, player_id)
     return player
+
+
+
+@router.post("/reset/")
+def reset_game(max_points: MaxPoints, db: Session = Depends(get_db)):
+    crud.reset_players(db, max_points.max_points)
+    return {"message": "Game has been reset"}
+
+
 
