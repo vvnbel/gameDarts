@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(game.router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
 # Дополнительный маршрут для проверки работоспособности
 @app.get("/health")
 def health_check():

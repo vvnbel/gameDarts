@@ -5,6 +5,11 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/static/styles.css">
     <style>
+        #start-game-btn {
+                background-color: green;
+                opacity: 0.9;
+                color: white;
+            }
         form input:focus,
         form button:focus {
             opacity: 1 !important;  /* Убираем прозрачность */
@@ -28,7 +33,7 @@
         }
         .table {
             background: #dee2e6;
-            border-radius: 10px;
+            border-radius: 0px;
             opacity: 1
         }
         .table th, .table td {
@@ -132,7 +137,27 @@
         #max-points {
             width: 150px;
         }
-
+        /* Style for the statistics table */
+        #statistics-table {
+            margin-top: 20px;
+            background-color: #1e2a38;
+            color: #e0f7fa;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #statistics-table th, #statistics-table td {
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        #statistics-table th {
+            background-color: #0d1b2a;
+        }
+        .logo {
+            height: 200px;
+            opacity: 1;
+            padding: 0px 0px 10px 0px;
+        }
 
     </style>
 </head>
@@ -147,10 +172,12 @@
         <input type="number" id="max-points" class="form-control mr-2" placeholder="Максимум очков" style="width: 130px" onkeypress="handleKeyPress(event, 'max-points')">
         <button type="button" class="btn btn-custom btn-max" onclick="setMaxPoints()" style="width: 130px;">MAX</button>
     </div>
+    <img src="/static/datz.png" alt="Game Logo" class="logo">
 
 
-    <button type="button" class="btn btn-custom" onclick="resetGame()" style="margin: 10px 0px 20px 0px;">GO!</button>
+    <button id="start-game-btn" type="button" class="btn btn-custom" onclick="resetGame()" style="margin: 10px 0px 20px 0px;">GO!</button>
     <h2></h2>
+
     <table class="table table-striped">
         <thead>
             <tr>
@@ -163,26 +190,60 @@
         </thead>
         <tbody id="player-list">
             {% for player in players %}
-                <tr id="player-{{ player.id }}" class="{{ 'highlight-winner' if player.points <= 0 }}">
-                    <td>
-                        <input type="text" id="input-points-{{ player.id }}" class="form-control"
-                               onkeypress="handleKeyPress(event, {{ player.id }})" value="{{ player.points_per_attempt|join(', ') }}">
-                    </td>
-                    <td id="name-{{ player.id }}">{{ player.name }}</td>
-                    <td id="points-{{ player.id }}"
-                        {% if player.points <= 0 %} style="color: green;" {% endif %}>{{ player.points }}</td>
-                    <td id="attempts-{{ player.id }}">{{ player.attempts }}</td>
-                    <td id="history-{{ player.id }}">
-                        {% for points in player.points_per_attempt %}
-                            <span>{{ points }}</span>{% if not loop.last %}, {% endif %}
-                        {% endfor %}
-                    </td>
-                    <td><button class="btn btn-danger btn-custom" onclick="deletePlayer({{ player.id }})">X</button></td>
-                </tr>
+                {% if player.is_active %}
+                    <tr id="player-{{ player.id }}" class="{{ 'highlight-winner' if player.points <= 0 }}">
+                        <td>
+                            <input type="text" id="input-points-{{ player.id }}" class="form-control"
+                                   onkeypress="handleKeyPress(event, {{ player.id }})" value="{{ player.points_per_attempt|join(', ') }}">
+                        </td>
+                        <td id="name-{{ player.id }}">{{ player.name }}</td>
+                        <td id="points-{{ player.id }}"
+                            {% if player.points <= 0 %} style="color: green;" {% endif %}>{{ player.points }}</td>
+                        <td id="attempts-{{ player.id }}">{{ player.attempts }}</td>
+                        <td id="history-{{ player.id }}">
+                            {% for points in player.points_per_attempt %}
+                                <span>{{ points }}</span>{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td><button class="btn btn-danger btn-custom" onclick="deletePlayer({{ player.id }})">X</button></td>
+                    </tr>
+                {% endif %}
             {% endfor %}
         </tbody>
     </table>
     <div id="winner-message" class="alert" style="display: none;"></div>
+
+
+    <table id="statistics-table" class="table">
+        <thead>
+            <tr>
+                <th>Имя</th>
+                <th>Сыграно игр</th>
+                <th>Попыток</th>
+                <th>Макс. очки за попытку</th>
+                <th>Победы</th>
+                <th>Процент побед</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players %}
+            <tr>
+                <td>{{ player.name }}</td>
+                <td>{{ player.games_played }}</td>
+                <td>{{ player.statistics.total_attempts }}</td>
+                <td>{{ player.statistics.max_points_in_game }}</td>
+                <td>{{ player.statistics.total_wins }}</td>
+                <td>
+                    {% if player.games_played > 0 %}
+                        {{ (player.statistics.total_wins / player.games_played) * 100 }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
     <!-- Popup для победителя -->
     <div id="winner-popup">
@@ -190,6 +251,7 @@
         <button class="btn btn-darts" onclick="resetGame(); closeWinnerPopup();">Сбросить результаты</button>
         <button class="btn btn-darts" onclick="closeWinnerPopup()">Продолжить</button>
     </div>
+
 
     <script>
         let currentInputIndex = 0;
@@ -223,7 +285,7 @@
                                 <td id="points-${player.id}">${player.points}</td>
                                 <td id="attempts-${player.id}">${player.attempts}</td>
                                 <td id="history-${player.id}"></td>
-                                <td><button class="btn btn-danger btn-custom" onclick="deletePlayer(${player.id})">Удалить</button></td>
+                                <td><button class="btn btn-danger btn-custom" onclick="deletePlayer(${player.id})">X</button></td>
                             </tr>`;
             playerList.innerHTML += newRow;
 
@@ -236,7 +298,6 @@
                 event.preventDefault();
                 if (fieldId === 'name') {
                     addPlayer();
-
                 } else if (fieldId === 'max-points') {
                     setMaxPoints();
                 } else {
@@ -272,7 +333,7 @@
                 if (result.player.points < 0) {
                     alert('Ход не засчитан: игрок ввел больше очков, чем нужно.');
                     // Обнуляем результат текущего ввода
-                    inputField.value = '';
+                    inputField.value = 0;
                 } else {
                     // Обновляем отображение очков и попыток, если ход корректен
                     pointsCell.innerText = result.player.points;
@@ -328,7 +389,7 @@
         }
 
         async function resetGame() {
-            const maxPoints = document.getElementById('max-points').value || 501;
+            const maxPoints = document.getElementById('max-points').value || 301;
             const response = await fetch('/reset/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -345,7 +406,7 @@
                     const historyCell = row.getElementsByTagName('td')[4];
                     const inputField = row.getElementsByTagName('td')[0].getElementsByTagName('input')[0];
                     pointsCell.innerText = maxPoints;
-                    pointsCell.innerText = '';
+
                     attemptsCell.innerText = 0;
                     inputField.value = ''; // Reset points history in input field
                     row.classList.remove('highlight-winner'); // Reset background color
@@ -367,23 +428,44 @@
         }
 
         async function setMaxPoints() {
-            const maxPoints = document.getElementById('max-points').value || 501;
+            const maxPoints = document.getElementById('max-points').value;
+            if (!maxPoints || isNaN(maxPoints) || maxPoints <= 0) {
+                alert("Введите корректное значение для максимальных очков.");
+                return;
+            }
             alert(`Максимальные очки установлены: ${maxPoints}`);
             const response = await fetch('/players/', { method: 'GET' });
             const players = await response.json();
             players.forEach(player => {
                 const pointsCell = document.getElementById(`points-${player.id}`);
-                pointsCell.innerText = maxPoints; // Update the points column to reflect new max points
+                pointsCell.innerText = "Press Go!"; // Update the points column to reflect new max points
                 pointsCell.style.color = ''; // Reset the color just in case
         });
         }
+        async function loadStatistics() {
+            const response = await fetch('/statistics/');
+            const statistics = await response.json();
 
+            const statsTable = document.getElementById('statistics-table');
+            statsTable.innerHTML = ''; // Очистить текущие данные
+
+            statistics.forEach(stat => {
+                const row = `<tr>
+                                <td>${stat.player_name}</td>
+                                <td>${stat.games_played}</td>
+                                <td>${stat.games_won}</td>
+                                <td>${stat.win_percentage}%</td>
+                            </tr>`;
+                statsTable.innerHTML += row;
+            });
+        }
+        /*
         document.getElementById('name').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
-                event.preventDefault(); // Остановить стандартное поведение (передача фокуса)
-                addPlayer(); // Вызвать функцию добавления игрока
+                event.preventDefault();
+                addPlayer();
             }
-        });
+        });*/
     </script>
 </body>
 </html>
