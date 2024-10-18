@@ -5,14 +5,85 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/static/styles.css">
     <style>
-        #start-game-btn {
-                background-color: green;
-                opacity: 0.9;
-                color: white;
+         .container_d {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 20px;
+            position: relative;
+            opacity: 1;
+        }
+
+        .btn-go {
+
+            background: radial-gradient(circle at 50% 50%, #3c0607, #d10005);
+            color: #fff;
+            font-weight: bold;
+            font-size: 18px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            outline: none;
+            position: relative;
+            z-index: 2;
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .btn-go:hover {
+            transform: scale(1.1);
+            box-shadow: 0 18px 20px rgba(0, 0, 0, 0.2);
+            background: radial-gradient(circle at 50% 50%, #3c0607, #d10005);
+            opacity: 1;
+        }
+
+        .btn-go:active {
+            transform: scale(1);
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            background: radial-gradient(circle at 50% 50%, #2fff18, #0f7514);
+            background: radial-gradient(circle at 50% 50%, #3c0607, #d10005);
+            opacity: 1;
+        }
+
+        .dart {
+            width: 8px;
+            height: 60px;
+            background-color: red;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
+            opacity: 0;
+            z-index: 1;
+        }
+
+        .dart.fly {
+            animation: flyDart 1s ease forwards;
+        }
+
+        @keyframes flyDart {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) rotate(0deg) scale(1);
             }
+            50% {
+                transform: translate(-200px, -200px) rotate(180deg) scale(0.8);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-400px, -400px) rotate(360deg) scale(0.5);
+            }
+        }
         form input:focus,
         form button:focus {
-            opacity: 1 !important;  /* Убираем прозрачность */
+            opacity: 1 !important;
         }
 
         form input,
@@ -26,7 +97,7 @@
             font-family: 'Orbitron', sans-serif;
         }
         body > *:not(table) {
-            opacity: 0.5;
+            opacity: 1;
         }
         h1, h2 {
             color: #e0f7fa;
@@ -51,38 +122,48 @@
             color: #1a237e;
             transform: scale(1.05);
         }
+
+
+
         .btn-darts {
-            background: linear-gradient(145deg, #ff1744, #d50000);
-            border: 2px solid #ffffff;
-            color: #ffffff;
+            background-color: #ff1744; /* Красный цвет */
+            border-radius: 50%; /* Круглая форма кнопки */
+            width: 60px;
+            height: 60px;
+            font-size: 20px;
             font-weight: bold;
-            padding: 10px 20px;
-            transition: transform 0.3s, background 0.3s, box-shadow 0.3s;
-            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1);
+            color: white;
+            transition: transform 0.3s, background-color 0.3s;
             position: relative;
             overflow: hidden;
-            z-index: 1;
+            border: none; /* Убираем границу */
         }
-        .btn-darts:before {
+
+        .btn-darts:hover {
+            background-color: #00e676; /* Зеленый цвет при наведении */
+            transform: scale(1.1); /* Эффект увеличения при наведении */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-darts::before {
             content: "";
             position: absolute;
-            top: 0;
+            width: 200%;
+            height: 200%;
+            background-color: rgba(255, 255, 255, 0.2);
+            top: -75%;
             left: -75%;
-            width: 150%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: skewX(-45deg);
-            transition: all 0.5s ease;
-            z-index: -1;
+            border-radius: 50%;
+            transition: 0.5s;
         }
-        .btn-darts:hover:before {
+
+        .btn-darts:hover::before {
             left: 100%;
-            transition: all 0.5s ease;
+            transition: 0.5s;
         }
-        .btn-darts:hover {
-            transform: scale(1.1);
-            box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.3);
-        }
+
+
+
         .alert {
             background: rgba(0, 255, 0, 0.2);
             border-color: #00ff00;
@@ -102,31 +183,89 @@
         .highlight-winner {
             background-color: #d4edda !important;
         }
-        #winner-popup {
+
+
+         #winner-popup {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background-color: #1a237e;
+            background-color: #303030; /* Темный фон */
             padding: 20px;
             border-radius: 10px;
             z-index: 1000;
-            color: #e0f7fa;
+            color: #e0f7fa; /* Светло-голубой цвет текста */
             text-align: center;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            opacity: 1;
+
+            width: 400px;
+            font-family: 'Orbitron', sans-serif;
+            animation: dartWinPopup 0.5s ease-in-out forwards;
+            opacity: 0.1;
         }
+
         #winner-popup h3 {
             margin-bottom: 20px;
+            font-size: 24px;
+            color: #00e676; /* Зеленый цвет для победителя */
+            text-transform: uppercase;
+            font-weight: bold;
         }
+
         #winner-popup button {
             margin-top: 10px;
             display: block;
             width: 100%;
+            font-size: 18px;
+            padding: 10px;
+            color: white;
+            background-color: #303030; /* Красный цвет для кнопки */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #winner-popup button:hover {
+            background-color: #00e676; /* Зеленый цвет при наведении */
+            transform: scale(1.05); /* Увеличение кнопки */
+        }
+
+        @keyframes dartWinPopup {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -70%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+
+
+
+        /* Эффект для дротика, попадающего в цель */
+        @keyframes dartEffect {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotate(0deg);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2) rotate(15deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
         }
         #name {
             width: 300px;
+
+        }
+        input#name:focus {
+            opacity: 1 !important;
         }
 
         .btn-max {
@@ -147,35 +286,61 @@
         }
         #statistics-table th, #statistics-table td {
             padding: 10px;
-            border: 1px solid #dee2e6;
+            border: 1px solid #0d1130;
             text-align: center;
+            opacity: 0.5;
         }
         #statistics-table th {
+            opacity: 0.6;
             background-color: #0d1b2a;
         }
         .logo {
             height: 200px;
-            opacity: 1;
+            opacity: 0.9;
             padding: 0px 0px 10px 0px;
+        }
+        .main-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .left-buttons {
+            display: flex;
+            flex-direction: column;
+            opacity: 0.4;
         }
 
     </style>
 </head>
 <body class="container">
-    <h1 class="mt-5"><></h1>
-    <form id="player-form" class="form-inline mb-3">
-        <input type="text" id="name" class="form-control mr-2" placeholder="Имя игрока" onkeypress="handleKeyPress(event, 'name')">
-        <button type="button" class="btn btn-custom" onclick="addPlayer()">ADD PLAYER</button>
-    </form>
+    <div class="main-container">
+        <div class="left-buttons">
+            <h1 class="mt-5"><></h1>
+            <form id="player-form" class="form-inline mb-3">
+                <input type="text" id="name" class="form-control mr-2" placeholder="Имя игрока" onkeypress="handleKeyPress(event, 'name')">
+                <button type="button" class="btn btn-custom" onclick="addPlayer()">ADD PLAYER</button>
+            </form>
+            <div class="form-inline mb-3">
+                <input type="number" id="max-points" class="form-control mr-2" placeholder="Максимум очков" style="width: 130px" onkeypress="handleKeyPress(event, 'max-points')">
+                <button type="button" class="btn btn-custom btn-max" onclick="setMaxPoints()" style="width: 130px;">MAX</button>
+            </div>
+        </div>
 
-    <div class="form-inline mb-3">
-        <input type="number" id="max-points" class="form-control mr-2" placeholder="Максимум очков" style="width: 130px" onkeypress="handleKeyPress(event, 'max-points')">
-        <button type="button" class="btn btn-custom btn-max" onclick="setMaxPoints()" style="width: 130px;">MAX</button>
+        <div class="container_d">
+            <img src="/static/datz.png" alt="Game Logo" class="logo">
+
+            <button class="btn-go" onclick="handleGoClick()">START</button>
+            <div class="dart" id="dart1"></div>
+            <div class="dart" id="dart2"></div>
+            <div class="dart" id="dart3"></div>
+        </div>
     </div>
-    <img src="/static/datz.png" alt="Game Logo" class="logo">
 
 
-    <button id="start-game-btn" type="button" class="btn btn-custom" onclick="resetGame()" style="margin: 10px 0px 20px 0px;">GO!</button>
+
+
     <h2></h2>
 
     <table class="table table-striped">
@@ -247,8 +412,8 @@
 
     <!-- Popup для победителя -->
     <div id="winner-popup">
-        <h3 id="winner-name"></h3>
-        <button class="btn btn-darts" onclick="resetGame(); closeWinnerPopup();">Сбросить результаты</button>
+        <h3 id="winner-name">Победитель: </h3>
+        <button class="btn btn-darts" onclick="resetGame(); closeWinnerPopup();">Начать заново</button>
         <button class="btn btn-darts" onclick="closeWinnerPopup()">Продолжить</button>
     </div>
 
@@ -438,7 +603,7 @@
             const players = await response.json();
             players.forEach(player => {
                 const pointsCell = document.getElementById(`points-${player.id}`);
-                pointsCell.innerText = "Press Go!"; // Update the points column to reflect new max points
+                pointsCell.innerText = "Press START!"; // Update the points column to reflect new max points
                 pointsCell.style.color = ''; // Reset the color just in case
         });
         }
@@ -459,7 +624,40 @@
                 statsTable.innerHTML += row;
             });
         }
-        /*
+        function handleGoClick() {
+            resetGame();
+            throwDarts();
+        }
+        function throwDarts() {
+            const dart1 = document.getElementById('dart1');
+            const dart2 = document.getElementById('dart2');
+            const dart3 = document.getElementById('dart3');
+
+            // Добавляем класс "fly" к дротикам, чтобы началась анимация
+            dart1.classList.add('fly');
+            setTimeout(() => dart2.classList.add('fly'), 200); // Задержка перед запуском второго дротика
+            setTimeout(() => dart3.classList.add('fly'), 400); // Задержка перед запуском третьего дротика
+
+            // Очищаем классы после завершения анимации, чтобы можно было запустить снова
+            setTimeout(() => {
+                dart1.classList.remove('fly');
+                dart2.classList.remove('fly');
+                dart3.classList.remove('fly');
+            }, 1500);
+        }
+        document.getElementById('name').addEventListener('focus', function() {
+            document.querySelector('.left-buttons').style.opacity = 1; //
+        });
+        document.getElementById('name').addEventListener('blur', function() {
+            document.querySelector('.left-buttons').style.opacity = 0.4; //
+        });
+        document.getElementById('max-points').addEventListener('focus', function() {
+            document.querySelector('.left-buttons').style.opacity = 1; //
+        });
+        document.getElementById('max-points').addEventListener('blur', function() {
+            document.querySelector('.left-buttons').style.opacity = 0.4; //
+        });
+                /*
         document.getElementById('name').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
